@@ -18,10 +18,10 @@ Dự án này là một hệ thống quản lý khách sạn hoàn chỉnh đư�
 ```cpp
 struct Room {
     string id;              // Mã phòng (VD: R101, R201)
-    string type;             // Loại phòng (Standard/Deluxe/Royal Suite)
-    int capacity;            // Sức chứa (số khách)
+    string type;            // Loại phòng (Standard/Deluxe/Royal Suite)
+    int capacity;           // Sức chứa (số khách)
     int pricePerNight;      // Giá phòng/đêm (VND)
-    string status;           // Trạng thái: "San sang", "Dang su dung", "Sua chua"
+    string status;          // Trạng thái: "San sang", "Dang su dung", "Sua chua"
 };
 ```
 
@@ -248,3 +248,4 @@ Nguyen Nguyen Trung
 
 ## 📄 License
 Dự án này được tạo cho mục đích học tập và nghiên cứu.
+
