@@ -22,17 +22,7 @@ Hệ thống quản lý khách sạn được xây dựng bằng C++ với giao 
 - **Bài toán**: Tối ưu doanh thu từ các booking không trùng lịch
 - **Thuật toán**: Weighted Interval Scheduling
 - **Độ phức tạp**: O(n²)
-- **Cách dùng**: Menu "Báo cáo & Thống kê" → "Toi uu doanh thu"
-
-## 🚀 Cách chạy
-
-```bash
-# Biên dịch
-g++ -o hotel_management Project_I_QuanLyKhachSan.cpp
-
-# Chạy chương trình
-./hotel_management
-```
+- **Cách dùng**: Menu "Báo cáo & Thống kê" → "Tối ưu doanh thu"
 
 Chương trình sẽ tự động tạo dữ liệu mẫu khi khởi động.
 
@@ -43,5 +33,4 @@ Chương trình sẽ tự động tạo dữ liệu mẫu khi khởi động.
 - **Booking**: id, customerID, roomID, checkIn, checkOut, guest, totalCost, status
 - **Date**: day, month, year
 
-## 👨‍💻 Tác giả
-Nguyen Nguyen Trung
+
