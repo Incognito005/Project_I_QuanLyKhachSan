@@ -149,13 +149,13 @@ int readInt(const string& prompt, int minValue, int maxValue){
         int value;
         if(cin >> value){
             if(value >= minValue && value <= maxValue){
-                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                cin.ignore(10000, '\n');
                 return value;
             }
         }
         cout << "Gia tri khong hop le, vui long nhap lai.\n";
         cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cin.ignore(10000, '\n');
     }
 }
 
@@ -164,14 +164,14 @@ Date inputDate(const string& label){
         cout << label << " (dd/mm/yyyy): ";
         Date date;
         if(cin >> date.day >> date.month >> date.year){
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.ignore(10000, '\n');
             if(isValidDate(date)){
                 return date;
             }
         }
         else {
             cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.ignore(10000, '\n');
         }
         cout << "Ngay thang khong hop le, vui long thu lai.\n";
     }
@@ -180,6 +180,12 @@ Date inputDate(const string& label){
 vector<Room> rooms;
 vector<Customer> customers;
 vector<Booking> bookings;
+
+string makeId(const string& prefix, int number, int width = 5){
+    stringstream ss;
+    ss << prefix << setfill('0') << setw(width) << number;
+    return ss.str();
+}
 
 // Thuật toán sắp xếp + tìm kiếm
 void sortRoomsById(){
@@ -827,6 +833,8 @@ void reportCustomerHistory() {
     cout << "Tong chi tieu: " << totalSpent << " VND\n";
 }
 
+int computeOptimizedRevenueValue(const vector<Booking>& candidateBookings, int& totalCurrent);
+
 // Quy hoach dong: Tối ưu doanh thu từ các booking không trùng lịch
 // Cho danh sách booking, tìm cách chọn các booking không trùng lịch để tối đa hóa doanh thu
 void optimizeRevenue() {
@@ -846,55 +854,55 @@ void optimizeRevenue() {
         return;
     }
 
-    // Sắp xếp booking theo ngày check-out (kết thúc)
-    sort(candidateBookings.begin(), candidateBookings.end(), [](const Booking& a, const Booking& b){
+    int totalCurrent = 0;
+    int bestRevenue = computeOptimizedRevenueValue(candidateBookings, totalCurrent);
+
+    cout << "Doanh thu toi da co the dat duoc: " << bestRevenue << " VND\n";
+    cout << "Tong doanh thu hien tai (tat ca booking): " << totalCurrent << " VND\n";
+    cout << "Ti le toi uu: " << fixed << setprecision(1)
+         << (totalCurrent > 0 ? (bestRevenue * 100.0 / totalCurrent) : 0) << "%\n";
+}
+
+int computeOptimizedRevenueValue(const vector<Booking>& candidateBookings, int& totalCurrent){
+    totalCurrent = 0;
+    if(candidateBookings.empty()) return 0;
+
+    vector<Booking> sorted = candidateBookings;
+    sort(sorted.begin(), sorted.end(), [](const Booking& a, const Booking& b){
         return compareDate(a.checkOut, b.checkOut) < 0;
     });
 
-    int n = candidateBookings.size();
-    vector<int> dp(n, 0);  // dp[i] = doanh thu tối đa khi xét đến booking thứ i
+    int n = sorted.size();
+    vector<int> dp(n, 0);
 
-    // Tìm booking gần nhất không trùng lịch với booking tại vị trí i
     auto findLastNonOverlap = [&](int i) -> int{
         for(int j = i - 1; j >= 0; j--){
             bool conflict = false;
-            // Kiểm tra conflict (chỉ xảy ra khi cùng phòng VÀ thời gian overlap)
-            if(candidateBookings[j].roomID == candidateBookings[i].roomID){
-                bool overlap = !(compareDate(candidateBookings[i].checkOut, candidateBookings[j].checkIn) <= 0 ||
-                                compareDate(candidateBookings[j].checkOut, candidateBookings[i].checkIn) <= 0);
+            if(sorted[j].roomID == sorted[i].roomID){
+                bool overlap = !(compareDate(sorted[i].checkOut, sorted[j].checkIn) <= 0 ||
+                                compareDate(sorted[j].checkOut, sorted[i].checkIn) <= 0);
                 conflict = overlap;
             }
-            // Khác phòng thì không conflict
-            
             if(!conflict) return j;
         }
         return -1;
     };
 
-    // DP: dp[i] = max(không chọn booking i, chọn booking i + dp[lastNonOverlap])
-    dp[0] = candidateBookings[0].totalCost;
+    dp[0] = sorted[0].totalCost;
     for(int i = 1; i < n; i++){
-        // Không chọn booking i
         int notTake = dp[i - 1];
-
-        // Chọn booking i
         int lastNonOverlap = findLastNonOverlap(i);
-        int take = candidateBookings[i].totalCost;
+        int take = sorted[i].totalCost;
         if(lastNonOverlap >= 0){
             take += dp[lastNonOverlap];
         }
         dp[i] = max(notTake, take);
     }
 
-    cout << "Doanh thu toi da co the dat duoc: " << dp[n - 1] << " VND\n";
-    cout << "Tong doanh thu hien tai (tat ca booking): ";
-    int totalCurrent = 0;
-    for(auto& b : candidateBookings){
+    for(const auto& b : sorted){
         totalCurrent += b.totalCost;
     }
-    cout << totalCurrent << " VND\n";
-    cout << "Ti le toi uu: " << fixed << setprecision(1)
-         << (totalCurrent > 0 ? (dp[n - 1] * 100.0 / totalCurrent) : 0) << "%\n";
+    return dp[n - 1];
 }
 
 // Data mẫu
@@ -935,6 +943,191 @@ void seedDemoData() {
     sortRoomsById();
     sortBookingsById();
 }
+/*
+void generateBenchmarkData(int roomCount, int customerCount, int bookingCount){
+    rooms.clear();
+    customers.clear();
+    bookings.clear();
+    rooms.reserve(roomCount);
+    customers.reserve(customerCount);
+    bookings.reserve(bookingCount);
+
+    for(int i = 1; i <= roomCount; i++){
+        Room room;
+        room.id = makeId("R", i, 5);
+        room.type = (i % 3 == 0) ? "Deluxe" : ((i % 5 == 0) ? "Royal Suite" : "Standard");
+        room.capacity = (i % 4) + 1;
+        room.pricePerNight = 300000 + (i % 10) * 50000;
+        room.status = "San sang";
+        rooms.push_back(room);
+    }
+
+    for(int i = 1; i <= customerCount; i++){
+        Customer customer;
+        customer.id = makeId("C", i, 5);
+        customer.name = "Customer " + to_string(i);
+        customer.phone = "09" + (to_string(10000000 + (i % 90000000)));
+        customer.email = "user" + to_string(i) + "@mail.com";
+        customer.idCard = to_string(100000000000LL + (i % 900000000000LL));
+        customers.push_back(customer);
+    }
+
+    mt19937 rng(42);
+    uniform_int_distribution<int> roomDist(0, max(0, roomCount - 1));
+    uniform_int_distribution<int> customerDist(0, max(0, customerCount - 1));
+    uniform_int_distribution<int> dayOffsetDist(0, 365);
+    uniform_int_distribution<int> stayDist(1, 5);
+
+    Date base{1, 1, 2025};
+    for(int i = 1; i <= bookingCount; i++){
+        int rIndex = roomDist(rng);
+        int cIndex = customerDist(rng);
+        int offset = dayOffsetDist(rng);
+        int stay = stayDist(rng);
+
+        Booking booking;
+        booking.id = makeId("B", i, 6);
+        booking.customerID = customers[cIndex].id;
+        booking.roomID = rooms[rIndex].id;
+        booking.checkIn = addDays(base, offset);
+        booking.checkOut = addDays(booking.checkIn, stay);
+        booking.guest = min(rooms[rIndex].capacity, 1 + (i % rooms[rIndex].capacity));
+        booking.pricePerNight = rooms[rIndex].pricePerNight;
+        booking.serviceFee = 50000;
+        int nights = max(1, daysBetween(booking.checkIn, booking.checkOut));
+        booking.totalCost = nights * (booking.pricePerNight + booking.serviceFee);
+        if(i % 10 == 0) booking.status = "Da huy";
+        else if(i % 3 == 0) booking.status = "Check Out";
+        else booking.status = "Dang hoat dong";
+        bookings.push_back(booking);
+    }
+}
+
+vector<string> buildSearchIdsForRooms(int count, mt19937& rng){
+    vector<string> ids;
+    ids.reserve(count);
+    uniform_int_distribution<int> dist(0, max(0, (int)rooms.size() - 1));
+    for(int i = 0; i < count; i++){
+        if(i % 2 == 0 && !rooms.empty()){
+            ids.push_back(rooms[dist(rng)].id);
+        } else {
+            ids.push_back("RZ" + to_string(100000 + i));
+        }
+    }
+    return ids;
+}
+
+vector<string> buildSearchIdsForBookings(int count, mt19937& rng){
+    vector<string> ids;
+    ids.reserve(count);
+    uniform_int_distribution<int> dist(0, max(0, (int)bookings.size() - 1));
+    for(int i = 0; i < count; i++){
+        if(i % 2 == 0 && !bookings.empty()){
+            ids.push_back(bookings[dist(rng)].id);
+        } else {
+            ids.push_back("BZ" + to_string(100000 + i));
+        }
+    }
+    return ids;
+}
+
+long long measureMillis(function<void()> fn){
+    auto start = chrono::high_resolution_clock::now();
+    fn();
+    auto end = chrono::high_resolution_clock::now();
+    return chrono::duration_cast<chrono::milliseconds>(end - start).count();
+}
+
+void runBenchmark(){
+    cout << "\n=== Benchmark ===\n";
+    int roomCount = 10000;
+    int customerCount = 10000;
+    int bookingCount = 10000;
+    int searchCount = 10000;
+    cout << "Dung mac dinh 10000 cho moi tap du lieu.\n";
+
+    auto genTime = measureMillis([&](){
+        generateBenchmarkData(roomCount, customerCount, bookingCount);
+    });
+    cout << "Tao du lieu xong: " << genTime << " ms\n";
+
+    mt19937 rng(123);
+    auto roomSearchIds = buildSearchIdsForRooms(searchCount, rng);
+    auto bookingSearchIds = buildSearchIdsForBookings(searchCount, rng);
+
+    cout << "Dang sort...\n";
+    auto sortRoomsTime = measureMillis([&](){
+        shuffle(rooms.begin(), rooms.end(), rng);
+        sortRoomsById();
+    });
+    auto sortBookingsTime = measureMillis([&](){
+        shuffle(bookings.begin(), bookings.end(), rng);
+        sortBookingsById();
+    });
+
+    cout << "Dang linear search rooms...\n";
+    int foundLinearRooms = 0;
+    auto linearRoomTime = measureMillis([&](){
+        for(const auto& id : roomSearchIds){
+            if(findRoom(id) != nullptr) foundLinearRooms++;
+        }
+    });
+
+    sortRoomsById();
+    cout << "Dang binary search rooms...\n";
+    int foundBinaryRooms = 0;
+    auto binaryRoomTime = measureMillis([&](){
+        for(const auto& id : roomSearchIds){
+            auto it = lower_bound(rooms.begin(), rooms.end(), id,
+                [](const Room& room, const string& value){ return room.id < value; });
+            if(it != rooms.end() && it->id == id) foundBinaryRooms++;
+        }
+    });
+
+    cout << "Dang linear search bookings...\n";
+    int foundLinearBookings = 0;
+    auto linearBookingTime = measureMillis([&](){
+        for(const auto& id : bookingSearchIds){
+            if(findBooking(id) != nullptr) foundLinearBookings++;
+        }
+    });
+
+    sortBookingsById();
+    cout << "Dang binary search bookings...\n";
+    int foundBinaryBookings = 0;
+    auto binaryBookingTime = measureMillis([&](){
+        for(const auto& id : bookingSearchIds){
+            auto it = lower_bound(bookings.begin(), bookings.end(), id, [](const Booking& b, const string& value){
+                return b.id < value;
+            });
+            if(it != bookings.end() && it->id == id) foundBinaryBookings++;
+        }
+    });
+
+    vector<Booking> candidateBookings;
+    candidateBookings.reserve(bookings.size());
+    for(const auto& b : bookings){
+        if(b.status == "Dang hoat dong" || b.status == "Check Out"){
+            candidateBookings.push_back(b);
+        }
+    }
+    int totalCurrent = 0;
+    cout << "Dang toi uu doanh thu (day du du lieu)...\n";
+    const int dpSample = (int)candidateBookings.size();
+    vector<Booking> dpInput(candidateBookings.begin(), candidateBookings.end());
+    auto dpTime = measureMillis([&](){
+        computeOptimizedRevenueValue(dpInput, totalCurrent);
+    });
+
+    cout << "\n--- Ket qua (ms) ---\n";
+    cout << "Sort rooms: " << sortRoomsTime << "\n";
+    cout << "Sort bookings: " << sortBookingsTime << "\n";
+    cout << "Linear rooms: " << linearRoomTime << " (found " << foundLinearRooms << ")\n";
+    cout << "Binary rooms: " << binaryRoomTime << " (found " << foundBinaryRooms << ")\n";
+    cout << "Linear bookings: " << linearBookingTime << " (found " << foundLinearBookings << ")\n";
+    cout << "Binary bookings: " << binaryBookingTime << " (found " << foundBinaryBookings << ")\n";
+    cout << "DP toi uu doanh thu: " << dpTime << "\n";
+} */
 
 // Menu hệ thống các chức năng
 void roomMenu(){
@@ -1032,6 +1225,7 @@ void showMainMenu(){
     cout << "2. Quan ly khach hang\n";
     cout << "3. Quan ly dat phong\n";
     cout << "4. Bao cao & Thong ke\n";
+    //cout << "5. Benchmark thuat toan\n";
     cout << "0. Thoat\n";
     cout << string(80, '=') << "\n";
 }
@@ -1050,6 +1244,7 @@ void runApp(){
         else if(option == 2) customerMenu();
         else if(option == 3) bookingMenu();
         else if(option == 4) reportMenu();
+        //else if(option == 5) runBenchmark();
     }
 }
 
